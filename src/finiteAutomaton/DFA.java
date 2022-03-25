@@ -6,14 +6,16 @@ public class DFA {
     private int largestStateNumber = -1;
     private final Set<String> alphabet;
     private final Map<Integer, Map<String, Integer>> transitionFunction;
+    private final Set<Integer> acceptingStates;
 
     public Map<Integer, Map<String, Integer>> getTransitionFunction() {
         return transitionFunction;
     }
 
-    public DFA(Map<Integer, Map<String, Integer>> transitionFunction) {
+    public DFA(Map<Integer, Map<String, Integer>> transitionFunction, Set<Integer> acceptingStates) {
         this.alphabet = new HashSet<>();
         this.transitionFunction = Objects.requireNonNullElseGet(transitionFunction, HashMap::new);
+        this.acceptingStates = Objects.requireNonNullElseGet(acceptingStates, HashSet::new);
     }
 
     public DFA addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument, NonSequentialStateNumber {
@@ -37,6 +39,11 @@ public class DFA {
         return this;
     }
 
+    public DFA addAcceptingStates(Integer... states) {
+        acceptingStates.addAll(Arrays.asList(states));
+        return this;
+    }
+
     public NFAe convertToNFAe() {
         Map<Integer, Map<String, Set<Integer>>> newTransitionFunction = new HashMap<>();
         for (Map.Entry<Integer, Map<String, Integer>> entry : this.transitionFunction.entrySet()) {
@@ -50,11 +57,12 @@ public class DFA {
             }
             newTransitionFunction.put(entry.getKey(), newInnerMap);
         }
-        return new NFAe(newTransitionFunction, null);
+        return new NFAe(newTransitionFunction, null, acceptingStates);
     }
 
     @Override
     public String toString() {
-        return "DFA Transition function: \n" + transitionFunction;
+        return "DFA Transition Function: \n" + transitionFunction + "\n" +
+                "DFA Accepting States: \n" + acceptingStates;
     }
 }

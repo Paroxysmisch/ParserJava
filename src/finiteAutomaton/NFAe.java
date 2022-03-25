@@ -7,6 +7,7 @@ public class NFAe {
     private final Set<String> alphabet;
     private final Map<Integer, Map<String, Set<Integer>>> transitionFunction;
     private final Map<Integer, Set<Integer>> epsilonTransitionFunction;
+    private final Set<Integer> acceptingStates;
 
     public Map<Integer, Map<String, Set<Integer>>> getTransitionFunction() {
         return transitionFunction;
@@ -16,10 +17,11 @@ public class NFAe {
         return epsilonTransitionFunction;
     }
 
-    public NFAe(Map<Integer, Map<String, Set<Integer>>> transitionFunction, Map<Integer, Set<Integer>> epsilonTransitionFunction) {
+    public NFAe(Map<Integer, Map<String, Set<Integer>>> transitionFunction, Map<Integer, Set<Integer>> epsilonTransitionFunction, Set<Integer> acceptingStates) {
         this.alphabet = new HashSet<>();
         this.transitionFunction = Objects.requireNonNullElseGet(transitionFunction, HashMap::new);
         this.epsilonTransitionFunction = Objects.requireNonNullElseGet(epsilonTransitionFunction, HashMap::new);
+        this.acceptingStates = Objects.requireNonNullElseGet(acceptingStates, HashSet::new);
     }
 
     public NFAe addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument, NonSequentialStateNumber {
@@ -74,8 +76,13 @@ public class NFAe {
         return this;
     }
 
+    public NFAe addAcceptingStates(Integer... states) {
+        acceptingStates.addAll(Arrays.asList(states));
+        return this;
+    }
+
     public DFA convertToDFA() throws NullTransitionOnArgument, NonSequentialStateNumber {
-        DFA result = new DFA(null);
+        DFA result = new DFA(null, null);
 
         Map<Integer, Set<Integer>> epsilonClosureCache = new HashMap<>();
         Map<Set<Integer>, Integer> newStateMapping = new HashMap<>();
@@ -112,8 +119,28 @@ public class NFAe {
             }
         }
 
+        // Calculate the new accepting states
+        for (Map.Entry<Set<Integer>, Integer> entry : newStateMapping.entrySet()) {
+            if (isNonEmptyIntersection(entry.getKey(), acceptingStates)) result.addAcceptingStates(entry.getValue());
+        }
+
         System.out.println("New state mapping: \n" + newStateMapping);
         return result;
+    }
+
+    private boolean isNonEmptyIntersection(Set<Integer> setOne, Set<Integer> setTwo) {
+        if (setOne.size() < setTwo.size()) {
+            // Iterate on setOne as it is smaller
+            for (int i : setOne) {
+                if (setTwo.contains(i)) return true;
+            }
+        } else {
+            // Iterate on setTwo as it is smaller
+            for (int i : setTwo) {
+                if (setOne.contains(i)) return true;
+            }
+        }
+        return false;
     }
 
     private int calculateMaxStateNumber() {
@@ -190,7 +217,8 @@ public class NFAe {
 
     @Override
     public String toString() {
-        return "NFAe Transition function: \n" + transitionFunction + "\n" +
-                "Epsilon transition function: \n" + epsilonTransitionFunction;
+        return "NFAe Transition Function: \n" + transitionFunction + "\n" +
+                "Epsilon Transition Function: \n" + epsilonTransitionFunction + "\n" +
+                "NFAe Accepting States: \n" + acceptingStates;
     }
 }
