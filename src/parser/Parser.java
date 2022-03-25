@@ -17,6 +17,10 @@ public class Parser {
         return nullable;
     }
 
+    public Map<List<String>, Set<String>> getFirst() {
+        return first;
+    }
+
     public Parser(Grammar grammar, Set<List<String>> nullable, Map<List<String>, Set<String>> first) throws NullGrammarException {
         if (grammar == null) throw new NullGrammarException();
         this.grammar = grammar;
@@ -64,12 +68,22 @@ public class Parser {
             // Loop through each production
             for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {
                 for (List<String> production : productionSet.getValue()) {
-                    if (isNullable(production)) {
-                        nullable.add(production); // RHS of production is nullable
-                        nullable.add(List.of(productionSet.getKey())); // LHS of production (the non-terminal) is nullable
+                    Set<String> previousSet = first.computeIfAbsent(List.of(productionSet.getKey()), k -> new HashSet<>());
+                    // Iterate through each grammar symbol in the production
+                    int i = 0;
+                    for (; i < production.size(); ++i) {
+                        previousSet.addAll(removeEpsilon(first.get(List.of(production.get(i)))));
+                        if (!nullable.contains(List.of(production.get(i)))) break;
                     }
+                    if (i == production.size()) previousSet.add("");
                 }
             }
         }
+    }
+
+    public Set<String> removeEpsilon(Set<String> set) {
+        Set<String> result = new HashSet<>(set);
+        result.remove("");
+        return result;
     }
 }
