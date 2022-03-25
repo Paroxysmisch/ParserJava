@@ -3,13 +3,10 @@ package finiteAutomaton;
 import java.util.*;
 
 public class NFAe {
-    private final int startState;
+    private int largestStateNumber = -1;
+    private Set<String> alphabet;
     private final Map<Integer, Map<String, Set<Integer>>> transitionFunction;
     private final Map<Integer, Set<Integer>> epsilonTransitionFunction;
-
-    public int getStartState() {
-        return startState;
-    }
 
     public Map<Integer, Map<String, Set<Integer>>> getTransitionFunction() {
         return transitionFunction;
@@ -19,14 +16,21 @@ public class NFAe {
         return epsilonTransitionFunction;
     }
 
-    public NFAe(int startState, Map<Integer, Map<String, Set<Integer>>> transitionFunction, Map<Integer, Set<Integer>> epsilonTransitionFunction) {
-        this.startState = startState;
+    public NFAe(Map<Integer, Map<String, Set<Integer>>> transitionFunction, Map<Integer, Set<Integer>> epsilonTransitionFunction) {
+        this.alphabet = new HashSet<>();
         this.transitionFunction = Objects.requireNonNullElseGet(transitionFunction, HashMap::new);
         this.epsilonTransitionFunction = Objects.requireNonNullElseGet(epsilonTransitionFunction, HashMap::new);
     }
 
-    public NFAe addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument {
+    public NFAe addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument, NonSequentialStateNumber {
         if (transitionOn == null) throw new NullTransitionOnArgument();
+        alphabet.add(transitionOn);
+
+        if (fromState > largestStateNumber + 1) throw new NonSequentialStateNumber(fromState, largestStateNumber);
+        if (fromState == largestStateNumber + 1) ++largestStateNumber;
+        if (toState > largestStateNumber + 1) throw new NonSequentialStateNumber(toState, largestStateNumber);
+        if (toState == largestStateNumber + 1) ++largestStateNumber;
+
         if (transitionFunction.containsKey(fromState)) {
             if (transitionFunction.get(fromState).containsKey(transitionOn)) {
                 // Both are in the transitionFunction
@@ -51,7 +55,12 @@ public class NFAe {
         return this;
     }
 
-    public NFAe addEpsilonTransition(int fromState, int toState) {
+    public NFAe addEpsilonTransition(int fromState, int toState) throws NonSequentialStateNumber {
+        if (fromState > largestStateNumber + 1) throw new NonSequentialStateNumber(fromState, largestStateNumber);
+        if (fromState == largestStateNumber + 1) ++largestStateNumber;
+        if (toState > largestStateNumber + 1) throw new NonSequentialStateNumber(toState, largestStateNumber);
+        if (toState == largestStateNumber + 1) ++largestStateNumber;
+
         if (epsilonTransitionFunction.containsKey(fromState)) {
             // fromState is already in the epsilonTransitionFunction
             epsilonTransitionFunction.get(fromState).add(toState);
@@ -65,29 +74,70 @@ public class NFAe {
         return this;
     }
 
-    public DFA convertToDFA() {
-        Map<Integer, Set<Integer>> epsilonClosureMap = new HashMap<>();
-        Set<Integer> visited = new HashSet<>(); // This is to deal with epsilon cycles
+    public DFA convertToDFA() throws NullTransitionOnArgument, NonSequentialStateNumber {
+        DFA result = new DFA(null);
 
-        return null;
-    }
+        Map<Integer, Set<Integer>> epsilonClosureCache = new HashMap<>();
+        Map<Set<Integer>, Integer> newStateMapping = new HashMap<>();
+        int newStateCounter = 0; // This is the number which should be assigned when creating a new state
 
-    public Set<Integer> computeEpsilonClosure(int startState, Map<Integer, Set<Integer>> epsilonClosureMap, Set<Integer> visited) {
-        visited.add(startState);
-        if (epsilonClosureMap.containsKey(startState)) return epsilonClosureMap.get(startState);
-        Set<Integer> result = new HashSet<>();
-        Set<Integer> reachableWithEpsilon = epsilonTransitionFunction.get(startState);
-        for (int i : reachableWithEpsilon) {
-            if (!visited.contains(i)) {
-                Set<Integer> subResult = computeEpsilonClosure(i, epsilonClosureMap, visited);
-                // Union result with subResult and store the answer in result
-                result.addAll(subResult);
+        // Prepopulate the start state
+        Set<Integer> startEpsilonClosure = computeEpsilonClosure(0);
+        epsilonClosureCache.put(0, startEpsilonClosure);
+        newStateMapping.put(startEpsilonClosure, newStateCounter);
+        ++newStateCounter;
+
+        for (int i = 0; i <= largestStateNumber; ++i) {
+            // Get the epsilon closure for state i, or compute it
+            Set<Integer> iEpsilonClosure = epsilonClosureCache.get(i);
+            if (iEpsilonClosure == null) {
+                iEpsilonClosure = computeEpsilonClosure(i);
+                epsilonClosureCache.put(i, iEpsilonClosure);
+            }
+
+            // Store this as a new state for the DFA, if a mapping is not already present
+            if (!newStateMapping.containsKey(iEpsilonClosure)) {
+                newStateMapping.put(iEpsilonClosure, newStateCounter);
+                ++newStateCounter;
+            }
+
+            // Iterate through the entire alphabet
+            for (String alpha : alphabet) {
+                Set<Integer> reachableStatesNoEpsilon = transitionToStates(iEpsilonClosure, alpha);
+                Set<Integer> reachableStatesWithEpsilon = computeEpsilonClosure(reachableStatesNoEpsilon, epsilonClosureCache);
+                // Store this as a new state for the DFA, if a mapping is not already present
+                if (!newStateMapping.containsKey(reachableStatesWithEpsilon)) {
+                    newStateMapping.put(reachableStatesWithEpsilon, newStateCounter);
+                    ++newStateCounter;
+                }
+                // Put this new transition in the DFA
+                result.addTransition(newStateMapping.get(iEpsilonClosure), alpha, newStateMapping.get(reachableStatesWithEpsilon));
             }
         }
-        // You can reach yourself from yourself
-        result.add(startState);
-        epsilonClosureMap.put(startState, result);
+
+        System.out.println("New state mapping: \n" + newStateMapping);
         return result;
+    }
+
+    private int calculateMaxStateNumber() {
+        int numStates = -1;
+        // First search the transitionFunction
+        for (Map.Entry<Integer, Map<String, Set<Integer>>> entry : transitionFunction.entrySet()) {
+            if (entry.getKey() > numStates) numStates = entry.getKey();
+            for (Map.Entry<String, Set<Integer>> innerEntry : entry.getValue().entrySet()) {
+                int maxInSet = innerEntry.getValue().stream().max(Comparator.comparingInt(Integer::intValue)).orElseThrow();
+                if (maxInSet > numStates) numStates = maxInSet;
+            }
+        }
+        // Next search the epsilonTransitionFunction
+        for (Map.Entry<Integer, Set<Integer>> entry : epsilonTransitionFunction.entrySet()) {
+            if (entry.getKey() > numStates) numStates = entry.getKey();
+            int maxInSet = entry.getValue().stream().max(Comparator.comparingInt(Integer::intValue)).orElseThrow();
+            if (maxInSet > numStates) numStates = maxInSet;
+        }
+
+        assert (largestStateNumber == numStates);
+        return numStates;
     }
 
     public Set<Integer> computeEpsilonClosure(int startState) {
@@ -108,10 +158,42 @@ public class NFAe {
         return visited;
     }
 
+    public Set<Integer> computeEpsilonClosure(Set<Integer> states, Map<Integer, Set<Integer>> epsilonClosureCache) {
+        Set<Integer> result = new HashSet<>();
+
+        for (int state : states) {
+            // First consult the cache
+            if (epsilonClosureCache.containsKey(state)) {
+                result.addAll(epsilonClosureCache.get(state));
+            } else {
+                // Not present in the cache
+                Set<Integer> computedEpsilonClosure = computeEpsilonClosure(state);
+                epsilonClosureCache.put(state, computedEpsilonClosure);
+                result.addAll(computedEpsilonClosure);
+            }
+        }
+
+        return result;
+    }
+
+    public Set<Integer> transitionToStates(Set<Integer> startStates, String transitionOn) {
+        Set<Integer> result = new HashSet<>();
+        for (int startState : startStates) {
+            Map<String, Set<Integer>> map = transitionFunction.get(startState);
+            if (map != null) {
+                Set<Integer> reachableStates = map.get(transitionOn);
+                if (reachableStates != null) {
+                    result.addAll(reachableStates);
+                }
+            }
+
+        }
+        return result;
+    }
+
     @Override
     public String toString() {
-        return "NFAe Start state: " + startState + "\n" +
-                "Transition function: \n" + transitionFunction + "\n" +
+        return "NFAe Transition function: \n" + transitionFunction + "\n" +
                 "Epsilon transition function: \n" + epsilonTransitionFunction + "\n";
     }
 }

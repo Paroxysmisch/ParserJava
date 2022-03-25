@@ -6,19 +6,16 @@ import java.util.Map;
 import java.util.Set;
 
 public class DFA {
-    private final int startState;
+    private int largestStateNumber = -1;
+    private Set<String> alphabet;
     private final Map<Integer, Map<String, Integer>> transitionFunction;
-
-    public int getStartState() {
-        return startState;
-    }
 
     public Map<Integer, Map<String, Integer>> getTransitionFunction() {
         return transitionFunction;
     }
 
-    public DFA(int startState, Map<Integer, Map<String, Integer>> transitionFunction) {
-        this.startState = startState;
+    public DFA(Map<Integer, Map<String, Integer>> transitionFunction) {
+        this.alphabet = new HashSet<>();
         if (transitionFunction != null) {
             this.transitionFunction = transitionFunction;
         } else {
@@ -26,16 +23,17 @@ public class DFA {
         }
     }
 
-    public DFA addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument {
+    public DFA addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument, NonSequentialStateNumber {
         if (transitionOn == null) throw new NullTransitionOnArgument();
+        alphabet.add(transitionOn);
+
+        if (fromState > largestStateNumber + 1) throw new NonSequentialStateNumber(fromState, largestStateNumber);
+        if (fromState == largestStateNumber + 1) ++largestStateNumber;
+        if (toState > largestStateNumber + 1) throw new NonSequentialStateNumber(toState, largestStateNumber);
+        if (toState == largestStateNumber + 1) ++largestStateNumber;
+
         if (transitionFunction.containsKey(fromState)) {
-            if (transitionFunction.get(fromState).containsKey(transitionOn)) {
-                // Both are in the transitionFunction. We overwrite the old toState value with the new one
-                transitionFunction.get(fromState).put(transitionOn, toState);
-            } else {
-                // Only the fromState is in the transitionFunction
-                transitionFunction.get(fromState).put(transitionOn, toState);
-            }
+            transitionFunction.get(fromState).put(transitionOn, toState);
         } else {
             // Neither are in the transitionFunction
             Map<String, Integer> mapping = new HashMap<>() {{
@@ -59,12 +57,11 @@ public class DFA {
             }
             newTransitionFunction.put(entry.getKey(), newInnerMap);
         }
-        return new NFAe(startState, newTransitionFunction, null);
+        return new NFAe(newTransitionFunction, null);
     }
 
     @Override
     public String toString() {
-        return "DFA Start state: " + startState + "\n" +
-                "Transition function: \n" + transitionFunction + "\n";
+        return "DFA Transition function: \n" + transitionFunction + "\n";
     }
 }
