@@ -7,7 +7,15 @@ import java.util.Set;
 
 public class DFA {
     private final int startState;
-    private Map<Integer, Map<String, Integer>> transitionFunction;
+    private final Map<Integer, Map<String, Integer>> transitionFunction;
+
+    public int getStartState() {
+        return startState;
+    }
+
+    public Map<Integer, Map<String, Integer>> getTransitionFunction() {
+        return transitionFunction;
+    }
 
     public DFA(int startState, Map<Integer, Map<String, Integer>> transitionFunction) {
         this.startState = startState;
@@ -36,6 +44,22 @@ public class DFA {
             transitionFunction.put(fromState, mapping);
         }
         return this;
+    }
+
+    public NFAe convertToNFAe() {
+        Map<Integer, Map<String, Set<Integer>>> newTransitionFunction = new HashMap<>();
+        for (Map.Entry<Integer, Map<String, Integer>> entry : this.transitionFunction.entrySet()) {
+            Map<String, Integer> innerMap = entry.getValue();
+            Map<String, Set<Integer>> newInnerMap = new HashMap<>();
+            for (Map.Entry<String, Integer> innerEntry : innerMap.entrySet()) {
+                Set<Integer> newSet = new HashSet<>() {{
+                    add(innerEntry.getValue());
+                }};
+                newInnerMap.put(innerEntry.getKey(), newSet);
+            }
+            newTransitionFunction.put(entry.getKey(), newInnerMap);
+        }
+        return new NFAe(startState, newTransitionFunction, null);
     }
 
     @Override

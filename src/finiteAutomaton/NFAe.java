@@ -1,14 +1,11 @@
 package finiteAutomaton;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class NFAe {
     private final int startState;
-    private Map<Integer, Map<String, Set<Integer>>> transitionFunction;
-    private Map<Integer, Set<Integer>> epsilonTransitionFunction;
+    private final Map<Integer, Map<String, Set<Integer>>> transitionFunction;
+    private final Map<Integer, Set<Integer>> epsilonTransitionFunction;
 
     public int getStartState() {
         return startState;
@@ -24,16 +21,8 @@ public class NFAe {
 
     public NFAe(int startState, Map<Integer, Map<String, Set<Integer>>> transitionFunction, Map<Integer, Set<Integer>> epsilonTransitionFunction) {
         this.startState = startState;
-        if (transitionFunction != null) {
-            this.transitionFunction = transitionFunction;
-        } else {
-            this.transitionFunction = new HashMap<>();
-        }
-        if (epsilonTransitionFunction != null) {
-            this.epsilonTransitionFunction = epsilonTransitionFunction;
-        } else {
-            this.epsilonTransitionFunction = new HashMap<>();
-        }
+        this.transitionFunction = Objects.requireNonNullElseGet(transitionFunction, HashMap::new);
+        this.epsilonTransitionFunction = Objects.requireNonNullElseGet(epsilonTransitionFunction, HashMap::new);
     }
 
     public NFAe addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument {
@@ -74,6 +63,49 @@ public class NFAe {
             epsilonTransitionFunction.put(fromState, destination);
         }
         return this;
+    }
+
+    public DFA convertToDFA() {
+        Map<Integer, Set<Integer>> epsilonClosureMap = new HashMap<>();
+        Set<Integer> visited = new HashSet<>(); // This is to deal with epsilon cycles
+
+        return null;
+    }
+
+    public Set<Integer> computeEpsilonClosure(int startState, Map<Integer, Set<Integer>> epsilonClosureMap, Set<Integer> visited) {
+        visited.add(startState);
+        if (epsilonClosureMap.containsKey(startState)) return epsilonClosureMap.get(startState);
+        Set<Integer> result = new HashSet<>();
+        Set<Integer> reachableWithEpsilon = epsilonTransitionFunction.get(startState);
+        for (int i : reachableWithEpsilon) {
+            if (!visited.contains(i)) {
+                Set<Integer> subResult = computeEpsilonClosure(i, epsilonClosureMap, visited);
+                // Union result with subResult and store the answer in result
+                result.addAll(subResult);
+            }
+        }
+        // You can reach yourself from yourself
+        result.add(startState);
+        epsilonClosureMap.put(startState, result);
+        return result;
+    }
+
+    public Set<Integer> computeEpsilonClosure(int startState) {
+        // Perform a DFS on epsilon transitions to get the epsilon closure
+        Set<Integer> visited = new HashSet<>();
+        Stack<Integer> toVisit = new Stack<>();
+        toVisit.add(startState);
+
+        while (!toVisit.isEmpty()) {
+            int state = toVisit.pop();
+            if (!visited.contains(state)) {
+                visited.add(state);
+                Set<Integer> reachableWithEpsilon = epsilonTransitionFunction.get(state);
+                if (reachableWithEpsilon != null) toVisit.addAll(reachableWithEpsilon);
+            }
+        }
+
+        return visited;
     }
 
     @Override
