@@ -1,13 +1,10 @@
 package finiteAutomaton;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DFA {
     private int largestStateNumber = -1;
-    private Set<String> alphabet;
+    private final Set<String> alphabet;
     private final Map<Integer, Map<String, Integer>> transitionFunction;
 
     public Map<Integer, Map<String, Integer>> getTransitionFunction() {
@@ -16,11 +13,7 @@ public class DFA {
 
     public DFA(Map<Integer, Map<String, Integer>> transitionFunction) {
         this.alphabet = new HashSet<>();
-        if (transitionFunction != null) {
-            this.transitionFunction = transitionFunction;
-        } else {
-            this.transitionFunction = new HashMap<>();
-        }
+        this.transitionFunction = Objects.requireNonNullElseGet(transitionFunction, HashMap::new);
     }
 
     public DFA addTransition(int fromState, String transitionOn, int toState) throws NullTransitionOnArgument, NonSequentialStateNumber {
@@ -62,6 +55,6 @@ public class DFA {
 
     @Override
     public String toString() {
-        return "DFA Transition function: \n" + transitionFunction + "\n";
+        return "DFA Transition function: \n" + transitionFunction;
     }
 }

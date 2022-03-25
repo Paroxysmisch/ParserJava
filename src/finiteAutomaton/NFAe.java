@@ -4,7 +4,7 @@ import java.util.*;
 
 public class NFAe {
     private int largestStateNumber = -1;
-    private Set<String> alphabet;
+    private final Set<String> alphabet;
     private final Map<Integer, Map<String, Set<Integer>>> transitionFunction;
     private final Map<Integer, Set<Integer>> epsilonTransitionFunction;
 
@@ -80,6 +80,7 @@ public class NFAe {
         Map<Integer, Set<Integer>> epsilonClosureCache = new HashMap<>();
         Map<Set<Integer>, Integer> newStateMapping = new HashMap<>();
         int newStateCounter = 0; // This is the number which should be assigned when creating a new state
+        Set<Set<Integer>> seenNewStates = new HashSet<>();
 
         // Prepopulate the start state
         Set<Integer> startEpsilonClosure = computeEpsilonClosure(0);
@@ -87,23 +88,17 @@ public class NFAe {
         newStateMapping.put(startEpsilonClosure, newStateCounter);
         ++newStateCounter;
 
-        for (int i = 0; i <= largestStateNumber; ++i) {
-            // Get the epsilon closure for state i, or compute it
-            Set<Integer> iEpsilonClosure = epsilonClosureCache.get(i);
-            if (iEpsilonClosure == null) {
-                iEpsilonClosure = computeEpsilonClosure(i);
-                epsilonClosureCache.put(i, iEpsilonClosure);
-            }
+        Stack<Set<Integer>> newStatesStack = new Stack<>();
+        newStatesStack.push(startEpsilonClosure);
 
-            // Store this as a new state for the DFA, if a mapping is not already present
-            if (!newStateMapping.containsKey(iEpsilonClosure)) {
-                newStateMapping.put(iEpsilonClosure, newStateCounter);
-                ++newStateCounter;
-            }
+        while(!newStatesStack.isEmpty()) {
+            Set<Integer> stateToExplore = newStatesStack.pop();
+            if (seenNewStates.contains(stateToExplore)) continue;
+            seenNewStates.add(stateToExplore);
 
             // Iterate through the entire alphabet
             for (String alpha : alphabet) {
-                Set<Integer> reachableStatesNoEpsilon = transitionToStates(iEpsilonClosure, alpha);
+                Set<Integer> reachableStatesNoEpsilon = transitionToStates(stateToExplore, alpha);
                 Set<Integer> reachableStatesWithEpsilon = computeEpsilonClosure(reachableStatesNoEpsilon, epsilonClosureCache);
                 // Store this as a new state for the DFA, if a mapping is not already present
                 if (!newStateMapping.containsKey(reachableStatesWithEpsilon)) {
@@ -111,7 +106,9 @@ public class NFAe {
                     ++newStateCounter;
                 }
                 // Put this new transition in the DFA
-                result.addTransition(newStateMapping.get(iEpsilonClosure), alpha, newStateMapping.get(reachableStatesWithEpsilon));
+                result.addTransition(newStateMapping.get(stateToExplore), alpha, newStateMapping.get(reachableStatesWithEpsilon));
+                // Put this newly created state in the stack to explore later
+                newStatesStack.push(reachableStatesWithEpsilon);
             }
         }
 
@@ -194,6 +191,6 @@ public class NFAe {
     @Override
     public String toString() {
         return "NFAe Transition function: \n" + transitionFunction + "\n" +
-                "Epsilon transition function: \n" + epsilonTransitionFunction + "\n";
+                "Epsilon transition function: \n" + epsilonTransitionFunction;
     }
 }
