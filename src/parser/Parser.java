@@ -138,6 +138,7 @@ public class Parser {
         // Mapping from non-terminal to the states representing the start of their corresponding productions
         // needed to add epsilon transitions later
         Map<String, Set<Integer>> nonTerminalStatesMap = new HashMap<>();
+        Map<Integer, String> stateNonTerminalMap = new HashMap<>();
 
         // Loop through each production
         for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {
@@ -155,6 +156,10 @@ public class Parser {
                     ++nextStateNumber;
                     // Iterate through each grammar symbol in the production and add consumption transitions
                     for (String grammarSymbol : production) {
+                        if (!Grammar.isTerminal(grammarSymbol)) {
+                            // Remember we need to wire this state up with epsilon transitions to the nonTerminal in the grammarSymbol
+                            stateNonTerminalMap.put(nextStateNumber - 1, grammarSymbol);
+                        }
                         result.addTransition(nextStateNumber - 1, grammarSymbol, nextStateNumber);
                         ++nextStateNumber;
                     }
@@ -163,6 +168,15 @@ public class Parser {
                 }
             }
         }
+
+        // Loop through stateNonTerminalMap to add the epsilon transitions
+        for (Map.Entry<Integer, String> entry : stateNonTerminalMap.entrySet()) {
+            Set<Integer> statesToMapTo = nonTerminalStatesMap.get(entry.getValue());
+            for (int state : statesToMapTo) {
+                result.addEpsilonTransition(entry.getKey(), state);
+            }
+        }
+
         return result;
     }
 }
