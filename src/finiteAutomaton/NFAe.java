@@ -76,8 +76,14 @@ public class NFAe {
         return this;
     }
 
-    public NFAe addAcceptingStates(Integer... states) {
+    public NFAe makeAcceptingStates(Integer... states) {
         acceptingStates.addAll(Arrays.asList(states));
+        return this;
+    }
+
+    public NFAe addAcceptingStates(Integer... states) {
+        largestStateNumber += states.length;
+        makeAcceptingStates(states);
         return this;
     }
 

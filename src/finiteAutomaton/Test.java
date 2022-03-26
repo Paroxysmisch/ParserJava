@@ -1,10 +1,5 @@
 package finiteAutomaton;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 public class Test {
     public static void main(String[] args) throws NullTransitionOnArgument, NonSequentialStateNumber {
         NFAe nfae = new NFAe(null, null, null)
@@ -12,7 +7,7 @@ public class Test {
                 .addTransition(0, "b", 1)
                 .addTransition(0, "b", 2)
                 .addEpsilonTransition(2, 3)
-                .addAcceptingStates(1, 3);
+                .makeAcceptingStates(1, 3);
         System.out.println(nfae);
 
 //        DFA dfa = new DFA(null, null)

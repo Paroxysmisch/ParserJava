@@ -1,5 +1,7 @@
 package parser;
 
+import finiteAutomaton.NonSequentialStateNumber;
+import finiteAutomaton.NullTransitionOnArgument;
 import grammar.Grammar;
 import grammar.InvalidNonTerminalException;
 import grammar.NullGrammarSymbolException;
@@ -7,7 +9,8 @@ import grammar.NullGrammarSymbolException;
 import java.util.List;
 
 public class Test {
-    public static void main(String[] args) throws InvalidNonTerminalException, NullGrammarSymbolException, NullGrammarException {
+    public static void main(String[] args) throws InvalidNonTerminalException, NullGrammarSymbolException, NullGrammarException, NullTransitionOnArgument, NonSequentialStateNumber {
+        // An unambiguous grammar
         Grammar grammar = new Grammar("T")
                 .addProduction("T", List.of("R"))
                 .addProduction("T", List.of("a", "T", "c"))
@@ -21,5 +24,8 @@ public class Test {
         System.out.println(parser.getFirst());
         parser.generateFollow();
         System.out.println(parser.getFollow());
+        System.out.println();
+        System.out.println(parser.generateNFAe());
+        System.out.println();
     }
 }

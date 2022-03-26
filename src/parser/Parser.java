@@ -1,5 +1,8 @@
 package parser;
 
+import finiteAutomaton.NFAe;
+import finiteAutomaton.NonSequentialStateNumber;
+import finiteAutomaton.NullTransitionOnArgument;
 import grammar.Grammar;
 import grammar.NullGrammarSymbolException;
 
@@ -52,7 +55,6 @@ public class Parser {
     }
 
     public boolean isNullable(List<String> grammarSymbols) {
-        // Need to wrap each grammar symbol inside a list
         for (String grammarSymbol : grammarSymbols) {
             if (!nullable.contains(grammarSymbol)) return false;
         }
@@ -127,5 +129,40 @@ public class Parser {
                 }
             }
         }
+    }
+
+    public NFAe generateNFAe() throws NullGrammarSymbolException, NullTransitionOnArgument, NonSequentialStateNumber {
+        NFAe result = new NFAe(null, null, null);
+        // When creating a new state, this is what it's number should be. Don't forget to increment the counter, once the state is created
+        int nextStateNumber = 0;
+        // Mapping from non-terminal to the states representing the start of their corresponding productions
+        // needed to add epsilon transitions later
+        Map<String, Set<Integer>> nonTerminalStatesMap = new HashMap<>();
+
+        // Loop through each production
+        for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {
+            for (List<String> production : productionSet.getValue()) {
+                // Handle special case where production body is just epsilon
+                if (production.size() == 0) {
+                    result.addAcceptingStates(nextStateNumber);
+                    Set<Integer> previousStates = nonTerminalStatesMap.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
+                    previousStates.add(nextStateNumber);
+                    ++nextStateNumber;
+                } else {
+                    // Start state where grammar symbol has been consumed
+                    Set<Integer> previousStates = nonTerminalStatesMap.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
+                    previousStates.add(nextStateNumber);
+                    ++nextStateNumber;
+                    // Iterate through each grammar symbol in the production and add consumption transitions
+                    for (String grammarSymbol : production) {
+                        result.addTransition(nextStateNumber - 1, grammarSymbol, nextStateNumber);
+                        ++nextStateNumber;
+                    }
+                    // Make the last grammar symbol an accepting state
+                    result.makeAcceptingStates(nextStateNumber - 1);
+                }
+            }
+        }
+        return result;
     }
 }
