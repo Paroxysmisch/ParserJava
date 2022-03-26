@@ -152,6 +152,8 @@ public class Parser {
 
         // Loop through each production
         for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {
+            // Ignore the special start symbol production
+            if (productionSet.getKey().equals(grammar.getStartSymbol())) continue;
             for (List<String> production : productionSet.getValue()) {
                 // Handle special case where production body is just epsilon
                 if (production.size() == 0) {
