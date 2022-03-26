@@ -59,7 +59,7 @@ public class Grammar {
         return this;
     }
 
-    public boolean isTerminal(String input) throws NullGrammarSymbolException {
+    public static boolean isTerminal(String input) throws NullGrammarSymbolException {
         if (input == null) throw new NullGrammarSymbolException();
         if (input.equals("")) return true; // We treat the empty string as a terminal
         return input.charAt(0) != Character.toUpperCase(input.charAt(0));

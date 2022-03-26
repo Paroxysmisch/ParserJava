@@ -1,6 +1,7 @@
 package parser;
 
 import grammar.Grammar;
+import grammar.NullGrammarSymbolException;
 
 import java.util.*;
 
@@ -8,6 +9,7 @@ public class Parser {
     private final Grammar grammar;
     private final Set<String> nullable; // Represents non-terminals which are nullable
     private final Map<String, Set<String>> first; // Represents the FIRST function which maps from a grammar symbol to the first terminal
+    private final Map<String, Set<String>> follow; // Represents the FOLLOW function which maps from a non-terminal to possible terminals which may follow that non-terminal
 
     public Grammar getGrammar() {
         return grammar;
@@ -21,11 +23,16 @@ public class Parser {
         return first;
     }
 
-    public Parser(Grammar grammar, Set<String> nullable, Map<String, Set<String>> first) throws NullGrammarException {
+    public Map<String, Set<String>> getFollow() {
+        return follow;
+    }
+
+    public Parser(Grammar grammar, Set<String> nullable, Map<String, Set<String>> first, Map<String, Set<String>> follow) throws NullGrammarException {
         if (grammar == null) throw new NullGrammarException();
         this.grammar = grammar;
         this.nullable = Objects.requireNonNullElseGet(nullable, HashSet::new);
         this.first = Objects.requireNonNullElseGet(first, HashMap::new);
+        this.follow = Objects.requireNonNullElseGet(follow, HashMap::new);
     }
 
     public void generateNullable() {
@@ -84,5 +91,41 @@ public class Parser {
         Set<String> result = new HashSet<>(set);
         result.remove("");
         return result;
+    }
+
+    public void generateFollow() throws NullGrammarSymbolException {
+        int lastFollowSize = 0;
+        Set<String> endOfInputFollowsStartSymbol = new HashSet<>() {{
+            add("$");
+        }};
+        follow.put(grammar.getStartSymbol(), endOfInputFollowsStartSymbol); // By convention, the end of input symbol, $, follows the start symbol
+        while (follow.size() > lastFollowSize) {
+            lastFollowSize = first.size();
+            // Loop through each production
+            for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {
+                for (List<String> production : productionSet.getValue()) {
+                    // Iterate through each grammar symbol in the production
+                    for (int i = 0; i < production.size(); ++i) {
+                        if (Grammar.isTerminal(production.get(i))) continue;
+                        // The current grammar symbol in the production is a non-terminal
+                        String nonTerminal = production.get(i);
+                        Set<String> previousFollow = follow.computeIfAbsent(nonTerminal, k -> new HashSet<>());
+                        if ((i + 1) == production.size()) {
+                            // nonTerminal happens to be the last grammar symbol in the production
+                            Set<String> LHSFollow = follow.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
+                            previousFollow.addAll(LHSFollow);
+                        } else {
+                            // There is another grammar symbol in the production after nonTerminal
+                            String nextGrammarSymbol = production.get(i + 1);
+                            previousFollow.addAll(removeEpsilon(first.get(nextGrammarSymbol)));
+                            if (first.get(nextGrammarSymbol).contains("")) {
+                                Set<String> LHSFollow = follow.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
+                                previousFollow.addAll(LHSFollow);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
