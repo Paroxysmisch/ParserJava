@@ -11,10 +11,10 @@ import java.util.List;
 public class Test {
     public static void main(String[] args) throws InvalidNonTerminalException, NullGrammarSymbolException, NullGrammarException, NullTransitionOnArgument, NonSequentialStateNumber {
         // An unambiguous grammar
-        Grammar grammar = new Grammar("T")
+        Grammar grammar = new Grammar("T'")
                 .addProduction("T", List.of("R"))
                 .addProduction("T", List.of("a", "T", "c"))
-                .addProduction("R", List.of(""))
+                .addProduction("R", List.of())
                 .addProduction("R", List.of("b", "R"));
 
         Parser parser = new Parser(grammar, null, null, null);
@@ -27,5 +27,6 @@ public class Test {
         System.out.println();
         System.out.println(parser.generateNFAe());
         System.out.println();
+        System.out.println(parser.generateDFA());
     }
 }

@@ -1,5 +1,6 @@
 package parser;
 
+import finiteAutomaton.DFA;
 import finiteAutomaton.NFAe;
 import finiteAutomaton.NonSequentialStateNumber;
 import finiteAutomaton.NullTransitionOnArgument;
@@ -145,11 +146,18 @@ public class Parser {
             for (List<String> production : productionSet.getValue()) {
                 // Handle special case where production body is just epsilon
                 if (production.size() == 0) {
-                    result.addAcceptingStates(nextStateNumber);
+//                    result.addAcceptingStates(nextStateNumber);
+//                    Set<Integer> previousStates = nonTerminalStatesMap.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
+//                    previousStates.add(nextStateNumber);
+//                    ++nextStateNumber;
+                    System.err.println("Empty production!");
+                    result.addEpsilonTransition(nextStateNumber, nextStateNumber + 1);
+                    result.makeAcceptingStates(nextStateNumber + 1);
                     Set<Integer> previousStates = nonTerminalStatesMap.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
                     previousStates.add(nextStateNumber);
-                    ++nextStateNumber;
+                    nextStateNumber += 2;
                 } else {
+                    System.err.println(production);
                     // Start state where grammar symbol has been consumed
                     Set<Integer> previousStates = nonTerminalStatesMap.computeIfAbsent(productionSet.getKey(), k -> new HashSet<>());
                     previousStates.add(nextStateNumber);
@@ -178,5 +186,9 @@ public class Parser {
         }
 
         return result;
+    }
+
+    public DFA generateDFA() throws NullTransitionOnArgument, NonSequentialStateNumber, NullGrammarSymbolException {
+        return generateNFAe().convertToDFA();
     }
 }
