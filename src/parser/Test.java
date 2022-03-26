@@ -16,7 +16,7 @@ public class Test {
 
         Parser parser = new Parser(grammar, null, null);
         parser.generateNullable();
-//        System.out.println(parser.getNullable());
+        System.out.println(parser.getNullable());
         parser.generateFirst();
         System.out.println(parser.getFirst());
     }
