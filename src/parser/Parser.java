@@ -81,7 +81,8 @@ public class Parser {
                     // Iterate through each grammar symbol in the production
                     int i = 0;
                     for (; i < production.size(); ++i) {
-                        previousSet.addAll(removeEpsilon(first.get(production.get(i))));
+                        Set<String> iFirst = first.computeIfAbsent(production.get(i), k -> new HashSet<>());
+                        previousSet.addAll(removeEpsilon(iFirst));
                         if (!nullable.contains(production.get(i))) break;
                     }
                     if (i == production.size()) previousSet.add("");
@@ -140,6 +141,14 @@ public class Parser {
         // needed to add epsilon transitions later
         Map<String, Set<Integer>> nonTerminalStatesMap = new HashMap<>();
         Map<Integer, String> stateNonTerminalMap = new HashMap<>();
+
+        // Add the special starting production manually
+        String startSymbolStripped = grammar.getStartSymbol().substring(0, grammar.getStartSymbol().length() - 1);
+        result.addTransition(nextStateNumber, startSymbolStripped, nextStateNumber + 1);
+        result.addTransition(nextStateNumber + 1, "$", nextStateNumber + 2);
+        result.makeAcceptingStates(nextStateNumber + 2);
+        stateNonTerminalMap.put(nextStateNumber, startSymbolStripped);
+        nextStateNumber += 3;
 
         // Loop through each production
         for (Map.Entry<String, Set<List<String>>> productionSet : grammar.getProductions().entrySet()) {

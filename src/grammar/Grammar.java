@@ -29,8 +29,18 @@ public class Grammar {
         nonTerminals = new HashSet<>() {{
             add(startSymbol);
         }};
-        terminals = new HashSet<>();
-        productions = new HashMap<>();
+        terminals = new HashSet<>() {{
+            add("$"); // Special end-of-input non-terminal
+        }};
+        productions = new HashMap<>() {{
+            String startSymbolStripped = startSymbol.substring(0, startSymbol.length() - 1);
+            put(startSymbol, new HashSet<>(){{
+                add(new LinkedList<>() {{
+                    add(startSymbolStripped);
+                    add("$");
+                }});
+            }});
+        }};
         this.startSymbol = startSymbol;
     }
 
@@ -62,6 +72,7 @@ public class Grammar {
     public static boolean isTerminal(String input) throws NullGrammarSymbolException {
         if (input == null) throw new NullGrammarSymbolException();
         if (input.equals("")) return true; // We treat the empty string as a terminal
+        if (input.equals("$")) return true; // We treat the end-of-input symbol as a terminal
         return input.charAt(0) != Character.toUpperCase(input.charAt(0));
     }
 

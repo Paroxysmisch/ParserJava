@@ -16,6 +16,8 @@ public class Test {
                 .addProduction("T", List.of("a", "T", "c"))
                 .addProduction("R", List.of())
                 .addProduction("R", List.of("b", "R"));
+        System.out.println(grammar);
+        System.out.println();
 
         Parser parser = new Parser(grammar, null, null, null);
         parser.generateNullable();
